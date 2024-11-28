@@ -69,7 +69,8 @@ def scaled_dot_production_attention(
     scores: torch.LongTensor = torch.matmul(Q, K.transpose(-1, -2)) / np.sqrt(D_K)
     scores.masked_fill_(attn_mask, -1e9)
     attn = nn.Softmax(dim=-1)(scores)
-    # batch_size * n_headers * len_q * (d_model/n_heads) 
+    # (batch_size * n_headers * len_q * len_k) * (batch_size * n_headers * len_k *(d_model/n_heads)) 
+    # -> batch_size * n_headers * len_q * (d_model/n_heads) 
     context = torch.matmul(attn, V)
     return context
 
