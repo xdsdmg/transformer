@@ -53,7 +53,7 @@ def get_pad_mask(seq_q: torch.Tensor, seq_k: torch.Tensor):
     return pad_mask.expand(batch_size, len_q, len_k)
 
 
-def get_subsequent_mask(seq: torch.LongTensor):
+def get_subsequent_mask(seq: torch.Tensor):
     batch_size, l, _ = seq.size()
     return torch.triu(torch.ones((batch_size, l, l)), diagonal=1).to(torch.bool)
 
@@ -66,7 +66,7 @@ def scaled_dot_production_attention(
 ):
 
     # batch_size * n_headers * len_q * len_k
-    scores: torch.LongTensor = torch.matmul(Q, K.transpose(-1, -2)) / np.sqrt(D_K)
+    scores: torch.Tensor = torch.matmul(Q, K.transpose(-1, -2)) / np.sqrt(D_K)
     scores.masked_fill_(attn_mask, -1e9)
     attn = nn.Softmax(dim=-1)(scores)
     # (batch_size * n_headers * len_q * len_k) * (batch_size * n_headers * len_k *(d_model/n_heads))
@@ -193,3 +193,45 @@ class DecoderLayer(nn.Module):
         )
         dec_outputs = self.pos_wise_ffn(dec_outputs)
         return dec_outputs
+
+
+class Decoder(nn.Module):
+    def __init__(self, tgt_vocab_size: int):
+        super(Decoder, self).__init__()
+        self.tgt_emb = nn.Embedding(tgt_vocab_size, D_MODEL)
+        self.pos_emb = PositionalEncoding(D_MODEL)
+        self.layers = nn.ModuleList([DecoderLayer() for _ in range(N_LAYERS)])
+
+    def forward(
+        self,
+        dec_inputs: torch.Tensor,
+        enc_inputs: torch.Tensor,
+        enc_outputs: torch.Tensor,
+    ):
+        dec_outputs = self.tgt_emb(dec_inputs)
+        dec_outputs = self.pos_emb(dec_outputs)
+        pad_mask = get_pad_mask(dec_inputs, dec_inputs)
+        sub_mask = get_subsequent_mask(dec_inputs)
+        self_attn_mask = torch.gt((pad_mask + sub_mask), 0)
+
+        co_attn_mask = get_pad_mask(dec_inputs, enc_inputs)
+
+        for layer in self.layers:
+            dec_outputs = layer(dec_outputs, enc_outputs, self_attn_mask, co_attn_mask)
+
+        return dec_outputs
+
+
+class Transformer(nn.Module):
+    def __init__(self, src_vocab_size: int, tgt_vocab_size: int):
+        super(Transformer, self).__init__()
+        self.encoder = Encoder(src_vocab_size)
+        self.decoder = Decoder(tgt_vocab_size)
+        self.projection = nn.Linear(D_MODEL, tgt_vocab_size)
+
+    def forward(self, enc_inputs: torch.Tensor, dec_inputs: torch.Tensor):
+        enc_outputs = self.encoder(enc_inputs)
+        dec_outputs = self.decoder(dec_inputs, enc_inputs, enc_outputs)
+        dec_logits = self.projection(dec_outputs)
+
+        return dec_logits.view(-1, dec_logits.size(-1))
