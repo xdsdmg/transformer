@@ -179,3 +179,17 @@ class DecoderLayer(nn.Module):
         self.self_attn = MultiHeadAttention()
         self.enc_self_attn = MultiHeadAttention()
         self.pos_wise_ffn = PosWiseFFN()
+
+    def forward(
+        self,
+        dec_inputs: torch.Tensor,
+        enc_outputs: torch.Tensor,
+        self_attn_mask: torch.Tensor,
+        enc_self_attn_mask: torch.Tensor,
+    ):
+        dec_outputs = self.self_attn(dec_inputs, dec_inputs, dec_inputs, self_attn_mask)
+        dec_outputs = self.enc_self_attn(
+            dec_outputs, enc_outputs, enc_outputs, enc_self_attn_mask
+        )
+        dec_outputs = self.pos_wise_ffn(dec_outputs)
+        return dec_outputs
