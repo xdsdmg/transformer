@@ -15,16 +15,16 @@ class PositionalEncoding(nn.Module):
 
         self.dropout = nn.Dropout(p=dropout)
 
-        self.pe = torch.zeros(max_len, d_model)  # 5000 * 512
+        pe = torch.zeros(max_len, d_model)  # 5000 * 512
         pos = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)  # 5000 * 1
         div_term = pos / pow(
             10000.0, torch.arange(0, d_model, 2).float() / d_model
         )  # 5000 * 1 / 256 = 5000 * 256
-        self.pe[:, 0::2] = torch.sin(div_term)
-        self.pe[:, 1::2] = torch.cos(div_term)
-        self.pe = self.pe.unsqueeze(0)
+        pe[:, 0::2] = torch.sin(div_term)
+        pe[:, 1::2] = torch.cos(div_term)
+        pe = pe.unsqueeze(0)
 
-        self.register_buffer("pe", self.pe)
+        self.register_buffer("pe", pe)
 
     def forward(self, x):
         x = x + self.pe
@@ -59,12 +59,11 @@ def get_subsequent_mask(seq: torch.Tensor):
 
 
 def scaled_dot_production_attention(
-    Q: torch.Tensor,
-    K: torch.Tensor,
-    V: torch.Tensor,
-    attn_mask: torch.Tensor,
+        Q: torch.Tensor,
+        K: torch.Tensor,
+        V: torch.Tensor,
+        attn_mask: torch.Tensor,
 ):
-
     # batch_size * n_headers * len_q * len_k
     scores: torch.Tensor = torch.matmul(Q, K.transpose(-1, -2)) / np.sqrt(D_K)
     scores.masked_fill_(attn_mask, -1e9)
@@ -85,11 +84,11 @@ class MultiHeadAttention(nn.Module):
         self.layer_norm = nn.LayerNorm(D_MODEL)
 
     def forward(
-        self,
-        Q: torch.Tensor,  # batch_size * len_q * d_model
-        K: torch.Tensor,  # batch_size * len_k * d_model
-        V: torch.Tensor,  # batch_size * len_k * d_model
-        attn_mask: torch.Tensor,
+            self,
+            Q: torch.Tensor,  # batch_size * len_q * d_model
+            K: torch.Tensor,  # batch_size * len_k * d_model
+            V: torch.Tensor,  # batch_size * len_k * d_model
+            attn_mask: torch.Tensor,
     ):
         residual, batch_size = Q, Q.shape[0]
 
@@ -181,11 +180,11 @@ class DecoderLayer(nn.Module):
         self.pos_wise_ffn = PosWiseFFN()
 
     def forward(
-        self,
-        dec_inputs: torch.Tensor,
-        enc_outputs: torch.Tensor,
-        self_attn_mask: torch.Tensor,
-        enc_self_attn_mask: torch.Tensor,
+            self,
+            dec_inputs: torch.Tensor,
+            enc_outputs: torch.Tensor,
+            self_attn_mask: torch.Tensor,
+            enc_self_attn_mask: torch.Tensor,
     ):
         dec_outputs = self.self_attn(dec_inputs, dec_inputs, dec_inputs, self_attn_mask)
         dec_outputs = self.enc_self_attn(
@@ -203,10 +202,10 @@ class Decoder(nn.Module):
         self.layers = nn.ModuleList([DecoderLayer() for _ in range(N_LAYERS)])
 
     def forward(
-        self,
-        dec_inputs: torch.Tensor,
-        enc_inputs: torch.Tensor,
-        enc_outputs: torch.Tensor,
+            self,
+            dec_inputs: torch.Tensor,
+            enc_inputs: torch.Tensor,
+            enc_outputs: torch.Tensor,
     ):
         dec_outputs = self.tgt_emb(dec_inputs)
         dec_outputs = self.pos_emb(dec_outputs)

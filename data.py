@@ -31,8 +31,8 @@ tgt_len = [len(example[1].split()) for example in RAW_DATA]
 
 
 def make_data(
-    raw_data: list[list[str]],
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        raw_data: list[list[str]],
+) -> tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]:
     encoder_inputs, decoder_inputs, decoder_outputs = [], [], []
 
     for i in range(len(raw_data)):
@@ -45,9 +45,9 @@ def make_data(
         decoder_outputs.append(decoder_output)
 
     return (
-        torch.Tensor(encoder_inputs),
-        torch.Tensor(decoder_inputs),
-        torch.Tensor(decoder_outputs),
+        torch.LongTensor(encoder_inputs),
+        torch.LongTensor(decoder_inputs),
+        torch.LongTensor(decoder_outputs),
     )
 
 
