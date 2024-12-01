@@ -5,6 +5,7 @@ import model
 import torch
 
 EPOCH_TOTAL = 1000
+MODEL_SAVE_PATH = "MyTransformer.pth"
 
 
 def train():
@@ -12,7 +13,7 @@ def train():
     m.train()
 
     criterion = nn.CrossEntropyLoss(ignore_index=0)
-    optimizer = optim.SGD(m.parameters(), lr=1e-3, momentum=0.99)  # 随机梯度下降
+    optimizer = optim.SGD(m.parameters(), lr=1e-3, momentum=0.99)
 
     loader = data.get_data_loader()
 
@@ -21,13 +22,13 @@ def train():
             output = m(enc_inputs, dec_inputs)
             loss = criterion(output, dec_outputs.view(-1))
 
-            optimizer.zero_grad()  # 清除模型梯度
+            optimizer.zero_grad()
             loss.backward()
-            optimizer.step()  # 更新模型参数
+            optimizer.step()
 
             print(f"Epoch [{epoch + 1}/1000], Loss: {loss.item()}")
 
-    torch.save(m, 'MyTransformer.pth')
+    torch.save(m, MODEL_SAVE_PATH)
 
 
 if __name__ == "__main__":

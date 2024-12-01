@@ -152,11 +152,6 @@ class EncoderLayer(nn.Module):
         return enc_outputs
 
 
-"""
-编码器的主要功能是对输入序列进行特征提取和语义编码。它会将输入序列（例如在自然语言处理中，可能是一个句子）中的每个元素（单词或子词等）转换为一个包含语义信息的向量表示。以处理句子 “我喜欢阅读书籍” 为例，编码器会将每个词映射到一个高维向量空间，这个向量空间中存储了关于这个词的语义信息，同时也包含了它与句子中其他词的关系信息。From Doubao
-"""
-
-
 class Encoder(nn.Module):
     def __init__(self, src_vocab_size: int):
         super(Encoder, self).__init__()

@@ -5,9 +5,6 @@ import torch.utils.data as data_
 RAW_DATA:
 [[the input of encoder, the input of decoder, the output of decoder], ...]
 """
-# S: 起始标记
-# E: 结束标记
-# P：意为padding，将当前序列补齐至最长序列长度的占位符
 RAW_DATA = [
     ["ich mochte ein bier P", "S i want a beer .", "i want a beer . E"],
     ["ich mochte ein cola P", "S i want a coke .", "i want a coke . E"],

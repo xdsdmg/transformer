@@ -1,1 +1,0 @@
-Pytorch 不支持 Python 3.12.5，项目使用 Python 3.11.2
