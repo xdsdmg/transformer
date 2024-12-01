@@ -68,3 +68,7 @@ class DataSet(data_.Dataset):
             self.decoder_inputs[idx],
             self.decoder_outputs[idx],
         )
+
+
+def get_data_loader() -> data_.DataLoader:
+    return data_.DataLoader(dataset=DataSet(), batch_size=2, shuffle=True)

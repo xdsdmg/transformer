@@ -22,12 +22,13 @@ class PositionalEncoding(nn.Module):
         )  # 5000 * 1 / 256 = 5000 * 256
         pe[:, 0::2] = torch.sin(div_term)
         pe[:, 1::2] = torch.cos(div_term)
-        pe = pe.unsqueeze(0)
+        pe = pe.unsqueeze(0)  # 1 * 5000 * 512
 
         self.register_buffer("pe", pe)
 
     def forward(self, x):
-        x = x + self.pe
+        pos_enc = self.pe[:, :x.size(1), :]
+        x = x + pos_enc
         return self.dropout(x)
 
 
@@ -39,23 +40,25 @@ def get_pad_mask(seq_q: torch.Tensor, seq_k: torch.Tensor):
     seq_q * seq_k^T = len_q * len_k
     """
 
-    batch_size, len_q, _ = seq_q.size()
+    batch_size, len_q = seq_q.size()
     len_k = seq_k.shape[1]
 
-    pad_mask = torch.ones((batch_size, len_q, len_k))
+    pad_mask = torch.zeros((batch_size, len_q, len_k))
 
-    for i in range(batch_size):  # TODO: need confirmed
+    for i in range(batch_size):
         for j in range(len_k):
-            r = torch.abs(seq_k[i, j, :])
-            if torch.sum(r) != 0:
-                pad_mask[i, :, j] = 0
+            if seq_k[i, j] == 0:
+                pad_mask[i, :, j] = 1
 
-    return pad_mask.expand(batch_size, len_q, len_k)
+    pad_mask = pad_mask.expand(batch_size, len_q, len_k)
+    pad_mask = pad_mask.to(torch.bool)
+
+    return pad_mask
 
 
 def get_subsequent_mask(seq: torch.Tensor):
-    batch_size, l, _ = seq.size()
-    return torch.triu(torch.ones((batch_size, l, l)), diagonal=1).to(torch.bool)
+    batch_size, word_num = seq.size()
+    return torch.triu(torch.ones((batch_size, word_num, word_num)), diagonal=1).to(torch.bool)
 
 
 def scaled_dot_production_attention(
@@ -162,7 +165,7 @@ class Encoder(nn.Module):
         self.layers = nn.ModuleList([EncoderLayer() for _ in range(N_LAYERS)])
 
     def forward(self, enc_inputs: torch.Tensor):
-        enc_outputs = self.src_emb(enc_inputs)
+        enc_outputs: torch.Tensor = self.src_emb(enc_inputs)
         enc_outputs = self.pos_emb(enc_outputs)
         self_attn_mask = get_pad_mask(enc_inputs, enc_inputs)
 
@@ -176,7 +179,7 @@ class DecoderLayer(nn.Module):
     def __init__(self):
         super(DecoderLayer, self).__init__()
         self.self_attn = MultiHeadAttention()
-        self.enc_self_attn = MultiHeadAttention()
+        self.co_self_attn = MultiHeadAttention()
         self.pos_wise_ffn = PosWiseFFN()
 
     def forward(
@@ -184,11 +187,11 @@ class DecoderLayer(nn.Module):
             dec_inputs: torch.Tensor,
             enc_outputs: torch.Tensor,
             self_attn_mask: torch.Tensor,
-            enc_self_attn_mask: torch.Tensor,
+            co_self_attn_mask: torch.Tensor,
     ):
         dec_outputs = self.self_attn(dec_inputs, dec_inputs, dec_inputs, self_attn_mask)
-        dec_outputs = self.enc_self_attn(
-            dec_outputs, enc_outputs, enc_outputs, enc_self_attn_mask
+        dec_outputs = self.co_self_attn(
+            dec_outputs, enc_outputs, enc_outputs, co_self_attn_mask
         )
         dec_outputs = self.pos_wise_ffn(dec_outputs)
         return dec_outputs
@@ -209,6 +212,7 @@ class Decoder(nn.Module):
     ):
         dec_outputs = self.tgt_emb(dec_inputs)
         dec_outputs = self.pos_emb(dec_outputs)
+
         pad_mask = get_pad_mask(dec_inputs, dec_inputs)
         sub_mask = get_subsequent_mask(dec_inputs)
         self_attn_mask = torch.gt((pad_mask + sub_mask), 0)

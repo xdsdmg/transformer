@@ -3,7 +3,7 @@ import torch.optim as optim
 import data
 import model
 
-EPOCH_TOTAL = 1
+EPOCH_TOTAL = 1000
 
 
 def train():
@@ -11,19 +11,18 @@ def train():
     m.train()
 
     criterion = nn.CrossEntropyLoss(ignore_index=0)
-    optimizer = optim.SGD(m.parameters(), lr=1e-3, momentum=0.99)
+    optimizer = optim.SGD(m.parameters(), lr=1e-3, momentum=0.99)  # 随机梯度下降
 
-    data_set = data.DataSet()
+    loader = data.get_data_loader()
+
     for epoch in range(EPOCH_TOTAL):
-        for enc_input, dec_input, dec_output in data_set:
-            print(enc_input, dec_input, dec_output)
+        for enc_inputs, dec_inputs, dec_outputs in loader:
+            output = m(enc_inputs, dec_inputs)
+            loss = criterion(output, dec_outputs.view(-1))
 
-            output = m(enc_input, dec_input)
-            loss = criterion(output, dec_output.view(-1))
-
-            optimizer.zero_grad()
+            optimizer.zero_grad()  # 清除模型梯度
             loss.backward()
-            optimizer.step()
+            optimizer.step()  # 更新模型参数
 
             print(f"Epoch [{epoch + 1}/1000], Loss: {loss.item()}")
 
