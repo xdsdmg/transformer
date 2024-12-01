@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.optim as optim
 import data
 import model
+import torch
 
 EPOCH_TOTAL = 1000
 
@@ -25,6 +26,8 @@ def train():
             optimizer.step()  # 更新模型参数
 
             print(f"Epoch [{epoch + 1}/1000], Loss: {loss.item()}")
+
+    torch.save(m, 'MyTransformer.pth')
 
 
 if __name__ == "__main__":
